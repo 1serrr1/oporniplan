@@ -1,0 +1,36 @@
+﻿<Page x:Class="WpfApp1.Min"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:WpfApp1"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="Метод минимальных элементов">
+
+    <Grid>
+        <TabControl>
+            <TabItem Header="Ввод данных МИН ЭЛ">
+                <StackPanel Margin="20">
+                    <Label Content="Предложения (s):" />
+                    <TextBox Name="SupplyTextBox" Width="300"/>
+                    <Label Content="Потребности (d):"/>
+                    <TextBox Name="DemandTextBox" Width="300"/>
+                    <Label Content="Стоимость (C):"/>
+                    <TextBox Name="CostTextBox" Width="300"/>
+                    <Button Content="Построить опорный план" Click="OnBuildPlanClicked" Width="200" Height="25" Margin="0, 20, 0, 0"/>
+                    <TextBlock Text="Пример ввода данных: s: 350, 200, 300   d: 170, 140, 200, 195, 145 С: 22, 14, 16, 28, 30; 19, 17, 26, 36, 36; 37, 30, 31, 39, 41" Margin="0,20,0,0"/>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Результаты">
+                <StackPanel>
+                    
+                    <DataGrid Name="ResultDataGrid" Width="760" Height="300"/>
+                    
+                    <TextBlock Name="CostTextBlock" Margin="10" FontSize="16" FontWeight="Bold" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Page>
