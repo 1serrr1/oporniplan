@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Excel = Microsoft.Office.Interop.Excel;
 
 namespace WpfApp1
 {
@@ -76,6 +79,9 @@ namespace WpfApp1
                 }
 
                 ResultDataGrid.ItemsSource = resultList;
+
+                MessageBox.Show("Чтобы увидеть ответ, перейдите во вкладку Результаты", "Информация",
+                       MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -181,6 +187,189 @@ namespace WpfApp1
         public class ResultRow
         {
             public string Quantities { get; set; }
+        }
+        //Очистка полей
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Вы действительно хотите очистить все поля?",
+                               "Подтверждение очистки",
+                               MessageBoxButton.YesNo,
+                               MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                SupplyTextBox.Text = "";
+                DemandTextBox.Text = "";
+                CostTextBox.Text = "";
+
+                ResultDataGrid.ItemsSource = null;
+                CostTextBlock.Text = "";
+
+                SupplyTextBox.Focus();
+            }
+        }
+
+        private void ExportResults_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // Создаем диалоговое окно для выбора типа экспорта
+                var exportDialog = new Window
+                {
+                    Title = "Экспорт результатов",
+                    Width = 300,
+                    Height = 200,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen
+                };
+
+                var stackPanel = new StackPanel { Margin = new Thickness(10) };
+
+                var txtButton = new Button
+                {
+                    Content = "Экспорт в текстовый файл (TXT)",
+                    Margin = new Thickness(0, 10, 0, 0),
+                    Padding = new Thickness(5)
+                };
+                txtButton.Click += (s, args) =>
+                {
+                    ExportToTxt();
+                    exportDialog.Close();
+                };
+
+                var excelButton = new Button
+                {
+                    Content = "Экспорт в Excel (XLSX)",
+                    Margin = new Thickness(0, 10, 0, 0),
+                    Padding = new Thickness(5)
+                };
+                excelButton.Click += (s, args) =>
+                {
+                    ExportToExcel();
+                    exportDialog.Close();
+                };
+
+                stackPanel.Children.Add(new TextBlock
+                {
+                    Text = "Выберите формат экспорта:",
+                    Margin = new Thickness(0, 10, 0, 0)
+                });
+                stackPanel.Children.Add(txtButton);
+                stackPanel.Children.Add(excelButton);
+
+                exportDialog.Content = stackPanel;
+                exportDialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при экспорте: {ex.Message}", "Ошибка",
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ExportToTxt()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Текстовые файлы (*.txt)|*.txt",
+                DefaultExt = "txt",
+                FileName = "Результаты_СЗУ_" + DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                using (StreamWriter writer = new StreamWriter(saveFileDialog.FileName))
+                {
+                    // Записываем общую стоимость
+                    writer.WriteLine(CostTextBlock.Text);
+                    writer.WriteLine();
+
+                    // Записываем заголовки столбцов (если есть)
+                    if (ResultDataGrid.Columns.Count > 0)
+                    {
+                        var headers = ResultDataGrid.Columns
+                            .Select(c => c.Header.ToString())
+                            .ToArray();
+                        writer.WriteLine(string.Join("\t", headers));
+                    }
+
+                    // Записываем данные
+                    foreach (var item in ResultDataGrid.Items)
+                    {
+                        if (item is ResultRow row)
+                        {
+                            writer.WriteLine(row.Quantities);
+                        }
+                    }
+                }
+
+                MessageBox.Show("Данные успешно экспортированы в текстовый файл!", "Успех",
+                              MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void ExportToExcel()
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Excel файлы (*.xlsx)|*.xlsx",
+                DefaultExt = "xlsx",
+                FileName = "Результаты_СЗУ_" + DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                Excel.Application excelApp = new Excel.Application();
+                Excel.Workbook workbook = excelApp.Workbooks.Add();
+                Excel.Worksheet worksheet = workbook.ActiveSheet;
+
+                try
+                {
+                    // Записываем общую стоимость
+                    worksheet.Cells[1, 1] = CostTextBlock.Text;
+
+                    // Записываем заголовки (если есть)
+                    if (ResultDataGrid.Columns.Count > 0)
+                    {
+                        for (int i = 0; i < ResultDataGrid.Columns.Count; i++)
+                        {
+                            worksheet.Cells[3, i + 1] = ResultDataGrid.Columns[i].Header.ToString();
+                        }
+                    }
+
+                    // Записываем данные
+                    int rowIndex = 4;
+                    foreach (var item in ResultDataGrid.Items)
+                    {
+                        if (item is ResultRow row)
+                        {
+                            var values = row.Quantities.Split(',');
+                            for (int i = 0; i < values.Length; i++)
+                            {
+                                worksheet.Cells[rowIndex, i + 1] = values[i].Trim();
+                            }
+                            rowIndex++;
+                        }
+                    }
+
+                    // Автоподбор ширины столбцов
+                    worksheet.Columns.AutoFit();
+
+                    // Сохраняем файл
+                    workbook.SaveAs(saveFileDialog.FileName);
+                    workbook.Close();
+                    excelApp.Quit();
+
+                    MessageBox.Show("Данные успешно экспортированы в Excel файл!", "Успех",
+                                  MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                finally
+                {
+                    // Освобождаем ресурсы
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(worksheet);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+                }
+            }
         }
     }
 }

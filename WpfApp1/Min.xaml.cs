@@ -78,6 +78,9 @@ namespace WpfApp1
 
                 // Отображаем общую стоимость в TextBlock
                 CostTextBlock.Text = $"Общая стоимость: {totalCost}";
+
+                MessageBox.Show("Чтобы увидеть ответ, перейдите во вкладку Результаты", "Информация",
+                       MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
