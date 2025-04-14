@@ -13,11 +13,6 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using System.Windows.Controls;
 
 namespace WpfApp1
 {
@@ -127,14 +122,14 @@ namespace WpfApp1
             }
 
             // Заполняем фиктивные элементы в новой матрице
-            // Фиктивным строкам и столбцам присваиваем очень высокую стоимость (например, 99999)
+            
             for (int i = 0; i < resizedMatrix.GetLength(0); i++)
             {
                 for (int j = 0; j < resizedMatrix.GetLength(1); j++)
                 {
                     if (i >= cost.GetLength(0) || j >= cost.GetLength(1))
                     {
-                        resizedMatrix[i, j] = 99999; // Фиктивная стоимость для фиктивных строк/столбцов
+                        resizedMatrix[i, j] = 0; // Фиктивная стоимость для фиктивных строк/столбцов
                     }
                 }
             }
@@ -156,7 +151,11 @@ namespace WpfApp1
                 plan.Add(row);
             }
 
-            while (supply.Sum() > 0 && demand.Sum() > 0)
+            // Создаем копии массивов, чтобы не изменять оригиналы
+            int[] remainingSupply = (int[])supply.Clone();
+            int[] remainingDemand = (int[])demand.Clone();
+
+            while (remainingSupply.Sum() > 0 && remainingDemand.Sum() > 0)
             {
                 // Шаг 1: Находим минимальную стоимость среди всех элементов
                 int minCost = int.MaxValue;
@@ -167,7 +166,7 @@ namespace WpfApp1
                     for (int j = 0; j < n; j++)
                     {
                         // Ищем минимальную стоимость среди элементов, которые еще не выбраны
-                        if (cost[i, j] < minCost && supply[i] > 0 && demand[j] > 0)
+                        if (cost[i, j] < minCost && remainingSupply[i] > 0 && remainingDemand[j] > 0)
                         {
                             minCost = cost[i, j];
                             minRow = i;
@@ -176,34 +175,17 @@ namespace WpfApp1
                     }
                 }
 
-                // Если нашли минимальную стоимость, назначаем товар
-                if (minRow != -1 && minCol != -1)
-                {
-                 
-                    int quantity = Math.Min(supply[minRow], demand[minCol]);
-                    plan[minRow][minCol] = quantity; // Назначаем количество
+                // Если не нашли минимальную стоимость (все элементы обработаны)
+                if (minRow == -1 || minCol == -1)
+                    break;
 
-                    // Обновляем предложение и потребности
-                    supply[minRow] -= quantity;
-                    demand[minCol] -= quantity;
+                // Назначаем товар
+                int quantity = Math.Min(remainingSupply[minRow], remainingDemand[minCol]);
+                plan[minRow][minCol] = quantity;
 
-                    // Убираем строку или столбец, если предложение или потребность исчерпаны
-                    if (supply[minRow] == 0)
-                    {
-                        for (int j = 0; j < n; j++)
-                        {
-                           // cost[minRow, j] = int.MaxValue;  // "Удаляем" строку
-                        }
-                    }
-
-                    if (demand[minCol] == 0)
-                    {
-                        for (int i = 0; i < m; i++)
-                        {
-                           // cost[i, minCol] = int.MaxValue;  // "Удаляем" столбец
-                        }
-                    }
-                }
+                // Обновляем оставшееся предложение и потребности
+                remainingSupply[minRow] -= quantity;
+                remainingDemand[minCol] -= quantity;
             }
 
             return plan;
